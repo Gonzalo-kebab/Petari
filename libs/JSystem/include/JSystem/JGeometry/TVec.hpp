@@ -43,10 +43,10 @@ namespace JGeometry {
         }
 
         // inline
-        inline TVec2(const TVec2<T> &rSrc) {
+        TVec2(const TVec2<T> &rSrc); /*{
             x = rSrc.x;
             y = rSrc.y;
-        }
+        }*/
 
         /* General operations */
         template <typename A>
@@ -150,12 +150,14 @@ namespace JGeometry {
         }
 
         // Can't be NO_INLINE (gets inlined in DiskGravity::DiskGravity())
-        template<typename T>
-        TVec3(T _x, T _y, T _z) {
+        TVec3(f32 _x, f32 _y, f32 _z) {
             x = _x;
             y = _y;
             z = _z;
         }
+
+        template<typename T>
+        TVec3(T, T, T);
         
         TVec3(f32 xz, f32 _y) {
             x = xz;
@@ -214,10 +216,14 @@ namespace JGeometry {
             ret *= scalar;
             return ret;
         }
+        // appears to be needed in RingBeam to match stack in some places
+        TVec3 scaleInline(f32 scalar) const {
+            TVec3 ret(*this);
+            ret.scale(scalar);
+            return ret;
+        }
 
         TVec3 operator-() const;
-
-        bool operator==(const TVec3 &) const;
 
         // This should probably be merged with operator-(), but ParallelGravity doesn't inline
         // operator-() despite only referencing it once. So if we can match that, the two functions
@@ -354,12 +360,6 @@ namespace JGeometry {
             JMAVECScaleAdd(&rNormal, &rVec, this, -rNormal.dot(rVec));
         }
 
-        inline void invert() {
-            this->x *= -1.0f;
-            this->y *= -1.0f;
-            this->z *= -1.0f;
-        }
-
         void scale(f32);
         void scale(f32, const TVec3 &);
         void negate();
@@ -380,7 +380,16 @@ namespace JGeometry {
             return magnitude;
         }
         
-        void setLength(f32);
+        f32 setLength(f32 newlength){
+            f32 oldlength = squareMag();
+            if(oldlength <=  0.0000038146973f){
+                return 0.0f;
+            }
+            f32 lengthinv = JGeometry::TUtil<f32>::inv_sqrt(oldlength);
+            scale(lengthinv * newlength);
+            return lengthinv * oldlength;
+        };
+
         f32 setLength(const TVec3 &, f32);
 
         f32 length() const { 
